@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <sys/wait.h>
+#include <signal.h>
 
 char SECRET[7];
 
@@ -60,24 +61,19 @@ int main(int argc, char **argv) {
                 }
             }
         }
-        fprintf(log, "something\n");
-        fflush(log);
-
         if (secret_end > 0) {
-            fprintf(log, "sshshhhh\n");
+            fprintf(log, "sshshhhh. Got a secret\n");
             int secret_size = 0;
             int size_end = secret_end;
             for (; size_end < (secret_end + 3) && size_end < n; size_end++) {
                 char c = bigbuff[size_end];
-                fprintf(log, "sizechar: %c\n", c);
                 if ( c <= '9' && c >= '0' ) {
+                    fprintf(log, "sizechar: %c\n", c);
                     secret_size *= 10;
                     secret_size += (int)(c - '0');
                 } else {
-                    size_end+=1;
                     break;
                 }
-                fprintf(log, "yep\n");
             }
             fprintf(log, "Size: %d\n", secret_size);
             if (secret_size > 1000) {
