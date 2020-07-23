@@ -29,8 +29,8 @@ char *extract_secret(char *buff_in, size_t buff_len, char *secret, size_t secret
     }
     // Shift everything in the buffer pre-secret over by the secret length
     memmove(buff_in + secret_len, buff_in, (secret_start - buff_in));
-    *buff_out = (secret_start + secret_len);
-    return (buff_in + secret_len);
+    *buff_out = (buff_in + secret_len);
+    return (secret_start + secret_len);
 }
 
 int main(int argc, char **argv) {
@@ -145,7 +145,7 @@ int main(int argc, char **argv) {
                 // If there was a prefix
                 // Remove the message from the buffer
                 int shiftlen = (secret_end - buff);
-                memmove(msg_end - shiftlen, buff, msg_end - buff);
+                memmove(msg_end - shiftlen, buff, shiftlen);
                 buff = msg_end - shiftlen;
             } else {
                 buff = msg_end;
