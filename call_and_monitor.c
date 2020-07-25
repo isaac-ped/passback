@@ -7,7 +7,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-#define SECRET "\x42h2s2o\x42"
+#define SECRET "\xDE\xAD o.O \xBE\xEF "
 #define CALLEE "./monitor_trigger"
 
 // Like strnstr but removing the null-termination requirement
