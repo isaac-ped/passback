@@ -1,0 +1,4 @@
+#!/bin/bash
+
+read X
+echo -e "\nThe program $0 got the stdin $X"
