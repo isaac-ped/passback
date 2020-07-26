@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+import sys
+import os
+import json
+import shlex
+import importlib
+from pathlib import Path
+from monitorlib import _funclib
+
+_SENDLOCAL=r"""
+_sendlocal() {
+    printf "\xDE\xAD\xBE\xEF ${#1} %s" "$1";
+}
+"""
+
+local_cmdfile = os.environ.get('LOCAL_CMDS')
+if local_cmdfile:
+    assert(local_cmdfile.endswith('.py'))
+    sys.path.insert(0, str(Path(local_cmdfile).expanduser().resolve().parent))
+    local_commands = importlib.import_module(Path(local_cmdfile).name[:-3])
+else:
+    from local_commands import *
+
+def aliases(funclib = _funclib):
+    aliases = [_SENDLOCAL]
+    for funcname, props in funclib.items():
+        vars = []
+        contents = [funcname]
+        for k, v in props['kwargs'].items():
+            vars.append(f'{k}="{v}"')
+            contents.append('%s,${#%s},${%s}' % (k, k, k))
+
+        contents_str = ','.join(contents)
+        # TODO: Shlex quote?
+        #contents_str = contents_str.replace('"', '\\"')
+
+        alias = '; '.join(vars) + f'; _sendlocal "{contents_str}"'
+
+        aliases.append(f'function {funcname}() {{ {alias}; }}')
+    return '\n'.join(aliases)
+
+def call(funcname, kwargs, funclib = _funclib):
+    funclib[funcname]['fn'](**kwargs)
+
+
+def run():
+
+    contents = sys.stdin.read()
+    fn, contents = contents.split(',',1)
+    kwargs = {}
+    while contents:
+        key, size, contents = contents.split(',',2)
+        value = contents[:int(size)]
+        kwargs[key] = value
+        contents = contents[int(size)+1:]
+
+    call(fn, kwargs)
+
+def main():
+    if len(sys.argv) > 2 or (len(sys.argv) == 2 and sys.argv[1] != '--aliases'):
+        print(f"Usage: {sys.argv[0]} [--aliases]")
+        exit(1)
+    if len(sys.argv) == 2:
+        print(aliases())
+    else:
+        run()
+
+if __name__ == "__main__":
+    main()

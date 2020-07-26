@@ -7,8 +7,8 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-#define SECRET "\xDE\xAD o.O \xBE\xEF "
-#define CALLEE "./monitor_trigger"
+#define SECRET "\xDE\xAD\xBE\xEF "
+#define CALLEE "./monitor_dispatch"
 
 // Like strnstr but removing the null-termination requirement
 char *strsearch(char *haystack, ssize_t hay_len, char *needle, size_t needle_len) {
@@ -146,7 +146,7 @@ ssize_t search_and_send_message(char *buff, size_t buff_len, int fd) {
 
 int main(int argc, char **argv) {
 
-    char secret[strlen(SECRET)+1];
+    char secret[strlen(SECRET)+2];
     int secret_len = sprintf(secret, SECRET);
 
     // Shift the arguments for passing through to exec
