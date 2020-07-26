@@ -7,11 +7,7 @@ import importlib
 from pathlib import Path
 from monitorlib import _funclib
 
-_SENDLOCAL=r"""
-_sendlocal() {
-    printf "\xDE\xAD\xBE\xEF ${#1} %s" "$1";
-}
-"""
+PASSBACK_PREFIX=r"\xDE\xAD\xBE\xEF "
 
 local_cmdfile = os.environ.get('LOCAL_CMDS')
 if local_cmdfile:
@@ -21,21 +17,22 @@ if local_cmdfile:
 else:
     from local_commands import *
 
+VAR_TMPFILE='/tmp/${USER}_pbvar'
+TOT_TMPFILE='/tmp/${USER}_pb'
+
+
 def aliases(funclib = _funclib):
-    aliases = [_SENDLOCAL]
+    aliases = []
     for funcname, props in funclib.items():
-        vars = []
-        contents = [funcname]
+        commands = []
+        commands.append(f'rm -f {TOT_TMPFILE}')
+        commands.append(f'echo -n "{funcname}," > {TOT_TMPFILE}')
         for k, v in props['kwargs'].items():
-            vars.append(f'{k}="{v}"')
-            contents.append('%s,${#%s},${%s}' % (k, k, k))
-
-        contents_str = ','.join(contents)
-        # TODO: Shlex quote?
-        #contents_str = contents_str.replace('"', '\\"')
-
-        alias = '; '.join(vars) + f'; _sendlocal "{contents_str}"'
-
+            commands.append(f'cat > {VAR_TMPFILE} <<< {v}')
+            commands.append(f'echo -n "{k},$(wc -c < {VAR_TMPFILE}| awk \'{{$1=$1}};1\')," >> {TOT_TMPFILE}')
+            commands.append(f'cat {VAR_TMPFILE} >> {TOT_TMPFILE}')
+        commands.append(r"printf '"+PASSBACK_PREFIX+f"%d ' $(wc -c < {TOT_TMPFILE}) && cat {TOT_TMPFILE}")
+        alias = '; '.join(commands)
         aliases.append(f'function {funcname}() {{ {alias}; }}')
     return '\n'.join(aliases)
 

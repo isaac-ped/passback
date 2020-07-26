@@ -10,6 +10,8 @@
 #define SECRET "\xDE\xAD\xBE\xEF "
 #define CALLEE "./monitor_dispatch"
 
+static FILE* log;
+
 // Like strnstr but removing the null-termination requirement
 char *strsearch(char *haystack, ssize_t hay_len, char *needle, size_t needle_len) {
     if (hay_len < needle_len) {
@@ -59,10 +61,11 @@ char *msgsearch(char *str, size_t str_len, int fd, size_t msg_len, char *buff, s
         return NULL;
     }
     if (str_len >= msg_len) {
+        fprintf(log, "Message fits in original string\n");
         return str;
     }
     memcpy(buff, str, str_len);
-    char *buff_end = str + str_len;
+    char *buff_end = buff + str_len;
     size_t n_left = msg_len - str_len;
     while ( n_left > 0) {
         ssize_t rtn = read(fd, buff_end, n_left);
@@ -70,6 +73,7 @@ char *msgsearch(char *str, size_t str_len, int fd, size_t msg_len, char *buff, s
             perror("Couldn't read!");
             return NULL;
         }
+        fprintf(log, "Read additional %zd characters: %.*s\n", rtn, (int)rtn, buff_end);
         n_left -= rtn;
         buff_end += rtn;
     }
@@ -118,6 +122,7 @@ ssize_t search_and_send_message(char *buff, size_t buff_len, int fd) {
         fprintf(stderr, "Could not read size from message\n");
         return -1;
     }
+    fprintf(log, "Got message of size %d in buffer of size %zu\n", msg_size, buff_len);
 
     size_t remaining_len = buff_len - (size_end - buff);
     char *message = msgsearch(size_end, remaining_len, fd, msg_size, msg_buff, sizeof(msg_buff));
@@ -125,6 +130,7 @@ ssize_t search_and_send_message(char *buff, size_t buff_len, int fd) {
         fprintf(stderr, "Error reading message itself\n");
         return -1;
     }
+    fprintf(log, "Full message (%d): %.*s\n", msg_size, msg_size, message);
 
     int rtn = start_callee(message, msg_size);
     if (rtn < 0) {
@@ -134,6 +140,7 @@ ssize_t search_and_send_message(char *buff, size_t buff_len, int fd) {
 
     // If the message is in a new buffer, there is no original buffer left
     if (message == msg_buff) {
+        fprintf(log, "Message in new buffer\n");
         return 0;
     }
 
@@ -197,7 +204,7 @@ int main(int argc, char **argv) {
     int nonblock_flags = blocking_flags | O_NONBLOCK;
 
     // Log to this file (For now)
-    FILE *log = fopen("test.txt", "w");
+    log = fopen("test.txt", "w");
     fprintf(log, "starting\n");
     fflush(log);
 
@@ -214,7 +221,7 @@ int main(int argc, char **argv) {
         char *buff_end = buff + n;
 
         // The '-4' is to ensure there is space for the length after
-        char *secret_start = strsearch(buff, n - 4, secret, secret_len);
+        char *secret_start = strsearch(buff, n - 2, secret, secret_len);
         if (secret_start) {
             fprintf(log, "Got secret string\n");
             char *secret_end = secret_start + secret_len;
@@ -227,8 +234,9 @@ int main(int argc, char **argv) {
             }
 
             char *msg_end = buff_end - remaining;
+
             size_t prefix_size = secret_start - buff;
-            fprintf(log, "%zd bytes remaining, %zu size prefix \n", remaining, prefix_size);
+            fprintf(log, "%zd byte message, %zd bytes remaining, %zu size prefix \n", (msg_end - secret_end), remaining, prefix_size);
             if (remaining > 0 && prefix_size > 0) {
                 // In this case, we copy the prefix to right before the remaining bytes
                 memmove(msg_end - prefix_size, buff, prefix_size);

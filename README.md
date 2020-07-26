@@ -10,16 +10,14 @@ Or: Copy a file to your local machine from the remote machine
 ```shell
 $ printf '
 > Hey there... There is a hidden message on the next line
-> \xDE\xAD o.O \xBE\xEF 60 It has exactly 60 characters in it but can contain anything
+> \xDE\xAD\xBE\xEF 60 It has exactly 60 characters in it but can contain anything
 > This line is back to normal
 > '
 
 Hey there... There is a hidden message on the next line
 This line is back to normal
 
-The program ./monitor_trigger got the following stdin:
- It has exactly 60 characters in it but can contain anything
-$
+# Meanwhile, the hidden string is passed to `monitor_dispatch`
 ```
 
 
@@ -38,15 +36,13 @@ def lpbcopy(contents):
 
 Generate the aliases from the function definitions:
 ```shell
-$ ./monitor_dispatch --aliases                                                                                                                                                    [master]
+$ ./monitor_dispatch --aliases
 
-_sendlocal() {
-    printf "\xDE\xAD\xBE\xEF ${#1} %s" "$1";
-}
+function lpbcopy() { rm -f /tmp/${USER}_pb; echo -n "lpbcopy," > /tmp/${USER}_pb; cat > /tmp/${USER}_pbvar <<< $(cat); echo -n "contents,$(wc -c < /tmp/${USER}_pbvar| awk '{$1=$1};1')," >> /tmp/${USER}_pb; cat /tmp/${USER}_pbvar >> /tmp/${USER}_pb; printf '\xDE\xAD\xBE\xEF %d ' $(wc -c < /tmp/${USER}_pb) && cat /tmp/${USER}_pb; }
 
-function lpbcopy() { contents="$(cat)"; _sendlocal "lpbcopy,contents,${#contents},${contents}"; }
-function nwhere() { directory="$(pwd)"; shell="${SHELL}"; host="${SSHNAME:-$HOSTNAME}"; _sendlocal "nwhere,directory,${#directory},${directory},shell,${#shell},${shell},host,${#host},${host}"; }
-function nvshere() { directory="$(pwd)"; shell="${SHELL}"; host="${SSHNAME:-$HOSTNAME}"; _sendlocal "nvshere,directory,${#directory},${directory},shell,${#shell},${shell},host,${#host},${host}"; }
+function nwhere() { rm -f /tmp/${USER}_pb; echo -n "nwhere," > /tmp/${USER}_pb; cat > /tmp/${USER}_pbvar <<< $(pwd); echo -n "directory,$(wc -c < /tmp/${USER}_pbvar| awk '{$1=$1};1')," >> /tmp/${USER}_pb; cat /tmp/${USER}_pbvar >> /tmp/${USER}_pb; cat > /tmp/${USER}_pbvar <<< ${SHELL}; echo -n "shell,$(wc -c < /tmp/${USER}_pbvar| awk '{$1=$1};1')," >> /tmp/${USER}_pb; cat /tmp/${USER}_pbvar >> /tmp/${USER}_pb; cat > /tmp/${USER}_pbvar <<< ${SSHNAME:-$HOSTNAME}; echo -n "host,$(wc -c < /tmp/${USER}_pbvar| awk '{$1=$1};1')," >> /tmp/${USER}_pb; cat /tmp/${USER}_pbvar >> /tmp/${USER}_pb; printf '\xDE\xAD\xBE\xEF %d ' $(wc -c < /tmp/${USER}_pb) && cat /tmp/${USER}_pb; }
+
+function nvshere() { rm -f /tmp/${USER}_pb; echo -n "nvshere," > /tmp/${USER}_pb; cat > /tmp/${USER}_pbvar <<< $(pwd); echo -n "directory,$(wc -c < /tmp/${USER}_pbvar| awk '{$1=$1};1')," >> /tmp/${USER}_pb; cat /tmp/${USER}_pbvar >> /tmp/${USER}_pb; cat > /tmp/${USER}_pbvar <<< ${SHELL}; echo -n "shell,$(wc -c < /tmp/${USER}_pbvar| awk '{$1=$1};1')," >> /tmp/${USER}_pb; cat /tmp/${USER}_pbvar >> /tmp/${USER}_pb; cat > /tmp/${USER}_pbvar <<< ${SSHNAME:-$HOSTNAME}; echo -n "host,$(wc -c < /tmp/${USER}_pbvar| awk '{$1=$1};1')," >> /tmp/${USER}_pb; cat /tmp/${USER}_pbvar >> /tmp/${USER}_pb; printf '\xDE\xAD\xBE\xEF %d ' $(wc -c < /tmp/${USER}_pb) && cat /tmp/${USER}_pb; }
 ```
 
 Once launched, instantiate the aliases and you can use them!
@@ -55,3 +51,10 @@ $ ./call_and_monitor bash
 $ source (./monitor_dispatch --aliases)
 $ echo "This goes to my local clipboard even from a remote machine. YAYY" | lpbcopy
 ```
+
+
+# FIXME
+
+Somewhere newlines are changing format from \n -> \r\n. I don't know when it's happening!
+
+It's throwing off charachter counts :(

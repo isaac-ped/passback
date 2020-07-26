@@ -1,9 +1,13 @@
 import os
+import subprocess
 from iterm2_local_commands import new_window, new_split
 from monitorlib import resolve
 
 @resolve(contents='$(cat)')
 def lpbcopy(contents):
+    with open('test.txt2', 'w') as f:
+        f.write(contents)
+    # TODO: This should use subprocess instead
     os.system(f"echo '{contents}' | pbcopy")
 
 
