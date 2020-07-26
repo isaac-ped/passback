@@ -5,7 +5,7 @@ import json
 import shlex
 import importlib
 from pathlib import Path
-from monitorlib import _funclib
+from passbacklib import _funclib
 
 PASSBACK_PREFIX=r"\xDE\xAD\xBE\xEF "
 

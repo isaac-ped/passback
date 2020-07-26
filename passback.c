@@ -8,7 +8,7 @@
 #include <signal.h>
 
 #define SECRET "\xDE\xAD\xBE\xEF "
-#define CALLEE "./monitor_dispatch"
+#define CALLEE "./passback_dispatch"
 
 static FILE* log;
 
@@ -256,7 +256,7 @@ int main(int argc, char **argv) {
             }
         }
         if (n < 0) {
-            printf("Exiting monitor\n");
+            printf("Exiting passback\n");
             exit(1);
         }
 

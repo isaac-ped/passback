@@ -1,4 +1,4 @@
-all: just_call call_and_monitor
+all: just_call passback
 
 %: %.c
 	gcc -Wall -o $@ $^

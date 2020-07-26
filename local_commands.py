@@ -1,7 +1,7 @@
 import os
 import subprocess
 from iterm2_local_commands import new_window, new_split
-from monitorlib import resolve
+from passbacklib import resolve
 
 @resolve(contents='$(cat)')
 def lpbcopy(contents):
