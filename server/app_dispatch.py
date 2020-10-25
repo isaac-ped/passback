@@ -1,48 +1,52 @@
-from passbacklib import _funclib
+from passbacklib import urlencoder_shell_func, _resolvables
 from local_commands import *
-from flask import request
+from flask import request, make_response
 import shlex
+import traceback
+from dataclasses import fields, dataclass
 
-def make_endpoints(app, funclib = _funclib):
-    for funcname, props in funclib.items():
-        def endpoint(name = funcname, props=props):
-            kwargs = request.args
-            if props['data']:
-                props['fn'](request.get_data(), **kwargs)
-            else:
-                props['fn'](**kwargs)
-            return ''
+def add_resolvable_endpoint(app, resolvable):
+    def endpoint():
+        provided_args = request.args
 
-        if props.get('data'):
-            methods = ['POST']
-        else:
-            methods = ['GET']
+        args = []
+        if resolvable.meta.pipe_input:
+            args = [request.get_data()]
+        
+        kwargs = dict(request.args)
+        if 'posargs' in kwargs:
+            args += shlex.split(kwargs['posargs'])
+            del kwargs['posargs']
 
-        app.add_url_rule(f'/{funcname}', funcname, endpoint, methods=methods)
+        try:
+            rtn = resolvable.call(*args, **kwargs)
+        except Exception as e:
+            rtn = f"Error calling {resolvable.meta.name} ({resolvable.fn.__name__})"
+            rtn += f"\n{traceback.format_exc()}"
+        return make_response(rtn)
 
-    app.add_url_rule(f'/', 'aliases', aliases)
+    name = resolvable.meta.name
+    if resolvable.meta.pipe_input:
+        methods = ["POST"]
+    else:
+        methods = ["GET"]
 
+    app.add_url_rule(f"/{name}", name, view_func=endpoint, methods=methods)
 
-def calls(funclib= _funclib):
-    calls={}
-    for funcname, props in funclib.items():
-        params=[]
-        for k, v in props['kwargs'].items():
-            params.append(shlex.quote(f'{k}="')+v+shlex.quote('"'))
-        param_string = shlex.quote('&').join(params)
-        prefix = shlex.quote(f'localhost:1138/{funcname}?')
-        cmd = f'curl {prefix}{param_string}'
-        if props['data']:
-            cmd += ' --data-binary @-'
-        calls[funcname] = cmd
+def generate_shell_functions(port, resolvables=_resolvables):
+    shell_functions = [urlencoder_shell_func]
+    for resolvable in resolvables:
+        shell_functions.append(resolvable.shell_func(port))
+    return shell_functions
 
-    return calls
+DEFAULT_PORT=1138
 
-def aliases(funclib = _funclib):
-    funcs = []
-    for k, v in calls(funclib).items():
-        funcs.append(f'{k}() {{ {v}; }}')
-    return '; '.join(funcs)
+def shell_functions_endpoint(resolvables=_resolvables):
+    port = request.args.get('port', DEFAULT_PORT)
+    return '\n'.join(generate_shell_functions(port, resolvables)) + "\n"
 
-if __name__ == '__main__':
-    print(aliases())
+def create_endpoints(app, resolvables=_resolvables):
+
+    for resolvable in resolvables:
+        add_resolvable_endpoint(app, resolvable)
+    app.add_url_rule(f"/", 'functions', view_func=shell_functions_endpoint)

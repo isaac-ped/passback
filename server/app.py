@@ -1,7 +1,9 @@
 from flask import Flask
-from app_dispatch import make_endpoints
+from app_dispatch import create_endpoints, generate_shell_functions
 
 app = Flask(__name__)
 
-make_endpoints(app)
+generate_shell_functions(123)
+
+create_endpoints(app)
 
