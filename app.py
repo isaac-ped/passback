@@ -6,4 +6,3 @@ app = Flask(__name__)
 generate_shell_functions(123)
 
 create_endpoints(app)
-
